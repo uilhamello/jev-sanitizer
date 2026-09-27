@@ -15,6 +15,33 @@ pip install git+https://github.com/uilhamello/jev-sanitizer.git
 
 Requer Python 3.11+.
 
+### Instalar pelo Claude Code
+
+Cole no Claude Code:
+
+```text
+Instale e configure o jev-sanitizer (https://github.com/uilhamello/jev-sanitizer) para mim:
+
+1. Clone o repositório em ~/tools/jev-sanitizer (ou dê git pull se já existir) e leia o README
+   antes de rodar qualquer coisa.
+2. Instale com `pipx install ~/tools/jev-sanitizer` ou, se não houver pipx,
+   `python3 -m pip install --user ~/tools/jev-sanitizer`. Requer Python 3.11+: confira antes.
+3. Rode os testes: `cd ~/tools/jev-sanitizer && PYTHONPATH=src python3 -m unittest discover -s tests`.
+4. Chave: NUNCA me peça a chave no chat e nunca a exiba. Se ~/.jev_env não existir, abra um
+   terminal interativo para mim com o comando de "Configuração básica" do README (read -rs ... chmod 600)
+   e espere eu avisar. Depois confira só a permissão (600) e se a variável existe, sem mostrar o valor.
+5. Crie ~/.config/jev-sanitizer/config.toml a partir de jev-sanitizer.example.toml, com
+   key_file = "~/.jev_env" e sanitize = true.
+6. Registre o MCP: `claude mcp add --scope user jev -- jev-sanitizer-mcp`.
+7. Valide sem gastar: `jev-sanitizer dry-run < ~/tools/jev-sanitizer/examples/request.json`
+   (o e-mail tem de sair como <EMAIL>). Depois, uma chamada real: `jev-sanitizer models`.
+8. Me mostre um resumo: versão instalada, testes, MCP registrado e o resultado das validações.
+   Avise que o MCP só aparece numa nova sessão do Claude Code.
+```
+
+Depois, em qualquer projeto e numa sessão nova, basta pedir, por exemplo: *"use o jev para
+classificar a urgência deste chamado"*. O Claude chama `jev_ask`, e a sanitização acontece antes do envio.
+
 ## Configuração básica
 
 1. Crie a chave no [console da TypeSafe](https://console.typesafe.ai) → **API Keys**.
@@ -117,5 +144,7 @@ arquivo é criado com permissão 600.
 ```bash
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
+
+Prova ponta a ponta, com chamada real e canários no fio: [examples/prova](examples/prova/README.md).
 
 Licença MIT.
