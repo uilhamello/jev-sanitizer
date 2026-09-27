@@ -64,8 +64,9 @@ terminal (Claude Code, opencode, Gemini CLI, Codex, Cursor e outros):
 ```text
 Instale e configure o jev-sanitizer (https://github.com/uilhamello/jev-sanitizer) para mim:
 
-1. Clone o repositório em ~/tools/jev-sanitizer (ou atualize com git pull) e leia o README
-   inteiro antes de rodar qualquer coisa.
+1. Clone com `git clone --depth 1 https://github.com/uilhamello/jev-sanitizer.git
+   ~/tools/jev-sanitizer` (ou atualize com git pull, se já existir) e leia o README inteiro
+   antes de rodar qualquer coisa.
 2. Confira que há Python 3.11+. Instale seguindo a seção "Instalação" do README (pipx ou,
    sem pipx, o venv com os links em ~/.local/bin). No fim, `jev-sanitizer --version` precisa
    funcionar.
@@ -175,7 +176,7 @@ linguagem natural, por exemplo: *"use o jev para classificar a urgência deste c
 | Cliente | Como registrar | Verificado |
 |---|---|---|
 | Claude Code | `claude mcp add --scope user jev -- jev-sanitizer-mcp` | ✅ chamada real |
-| opencode | em `opencode.json`: `{"mcp": {"jev": {"type": "local", "command": ["jev-sanitizer-mcp"]}}}` | ✅ chamada real, com modelo GPT |
+| opencode | em `opencode.json`: `{"mcp": {"jev": {"type": "local", "command": ["jev-sanitizer-mcp"]}}}` | ✅ chamada real e prompt de instalação ponta a ponta, com modelo GPT |
 | Gemini CLI | em `~/.gemini/settings.json`: `{"mcpServers": {"jev": {"command": "jev-sanitizer-mcp"}}}` | ⚪ não testado |
 | Codex CLI | em `~/.codex/config.toml`: `[mcp_servers.jev]` e `command = "jev-sanitizer-mcp"` | ⚪ não testado |
 | Claude Desktop, Cursor e outros | configuração genérica: `{"mcpServers": {"jev": {"command": "jev-sanitizer-mcp"}}}` | ⚪ não testado |
