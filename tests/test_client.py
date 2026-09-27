@@ -6,6 +6,8 @@ import unittest
 from unittest import mock
 
 from jev_sanitizer import Config, JevClient
+from jev_sanitizer import cli, mcp_server
+from jev_sanitizer.config import load_config
 from jev_sanitizer.mcp_server import Server
 
 Q = {"urgent": {"type": "noul", "instructions": "Is it urgent?", "criteria": {"true": "yes", "false": "no"}}}
@@ -59,6 +61,32 @@ class Ask(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     c.prepare(state, q)
 
+    def test_identifiers_with_pii_are_blocked(self):
+        c = client()
+        choice = {"type": "choice", "instructions": "i", "criteria": {"a": "x", "cpf_12345678901": "y"}}
+        for q, model, reason in [(Q, "123.456.789-01", "model:pii_in_identifier"),
+                                 ({"cpf_12345678901": Q["urgent"]}, None, "name:cpf_12345678901:pii_in_identifier"),
+                                 ({"x": choice}, None, "x.option:pii_in_identifier")]:
+            with self.subTest(reason=reason):
+                with mock.patch.object(c, "_http") as http:
+                    out = c.ask("s", q, model=model)
+                self.assertEqual(out["status"], "blocked")
+                self.assertIn(reason, out["reasons"])
+                http.assert_not_called()
+
+    def test_default_identifiers_pass(self):
+        self.assertTrue(client().dry_run("s", Q)["can_send"])
+        self.assertTrue(client(provider="vercel").dry_run("s", Q)["can_send"])
+
+    def test_broken_log_keeps_the_answer(self):
+        with tempfile.TemporaryDirectory() as d:
+            c = client(log_path=d)  # a directory: every write fails
+            with mock.patch.object(c, "_http", return_value=FAKE), mock.patch("sys.stderr"):
+                self.assertEqual(c.ask("s", Q)["status"], "ok")
+                with mock.patch.object(c, "_http", side_effect=TimeoutError()):
+                    self.assertEqual(c.ask("s", Q)["status"], "unavailable")
+                self.assertEqual(c.ask("dsn redis://h", Q)["status"], "blocked")
+
     def test_log_has_no_content_and_is_600(self):
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "log.jsonl")
@@ -86,6 +114,27 @@ class ConfigKey(unittest.TestCase):
         finally:
             os.unlink(f.name)
 
+    def test_config_in_cwd_is_ignored(self):
+        cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "jev-sanitizer.toml"), "w") as f:
+                f.write("sanitize = false\n")
+            try:
+                os.chdir(d)
+                with mock.patch.dict(os.environ, {"HOME": d}, clear=True):
+                    self.assertTrue(load_config().sanitize)
+            finally:
+                os.chdir(cwd)
+
+    def test_max_chars_is_coerced(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False) as f:
+            f.write('max_chars = "50"\n')
+        try:
+            with mock.patch.dict(os.environ, {"JEV_SANITIZER_CONFIG": f.name}, clear=True):
+                self.assertEqual(load_config().max_chars, 50)
+        finally:
+            os.unlink(f.name)
+
     def test_unknown_provider(self):
         with self.assertRaises(ValueError):
             Config(provider="evil").endpoint
@@ -107,6 +156,37 @@ class Mcp(unittest.TestCase):
         self.assertEqual(json.loads(r["result"]["content"][0]["text"])["status"], "ok")
         bad = s.handle({"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "jev_ask", "arguments": {}}})
         self.assertTrue(bad["result"]["isError"])
+
+    def test_unexpected_error_keeps_request_id(self):
+        s = Server(client())
+        with mock.patch.object(s, "call", side_effect=TypeError()):
+            r = s.handle({"jsonrpc": "2.0", "id": 5, "method": "tools/call",
+                          "params": {"name": "jev_ask", "arguments": {}}})
+        self.assertEqual(r["id"], 5)
+        self.assertTrue(r["result"]["isError"])
+
+    def test_main_loop_keeps_request_id(self):
+        lines = ['{"jsonrpc": "2.0", "id": 8, "method": "initialize"', '[1]\n',
+                 '{"jsonrpc": "2.0", "id": 9, "method": "tools/list", "params": null}\n']
+        with mock.patch("sys.stdin", lines), mock.patch("sys.stdout") as out:
+            mcp_server.main()
+        replies = [json.loads(c.args[0]) for c in out.write.call_args_list]
+        self.assertEqual([r["id"] for r in replies], [None, None, 9])
+        self.assertEqual(replies[0]["error"]["code"], -32700)
+        self.assertEqual(replies[1]["error"]["code"], -32603)
+
+
+class Cli(unittest.TestCase):
+    def test_sanitize_uses_config_rules(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False) as f:
+            f.write('extra_blocks = [["internal", "(?i)confidencial"]]\n')
+        try:
+            with mock.patch.dict(os.environ, {"JEV_SANITIZER_CONFIG": f.name}, clear=True), \
+                    mock.patch("sys.stdin", mock.Mock(read=lambda: "doc CONFIDENCIAL")), \
+                    mock.patch("sys.stdout"), mock.patch("sys.stderr"):
+                self.assertEqual(cli.main(["sanitize"]), 2)
+        finally:
+            os.unlink(f.name)
 
 
 if __name__ == "__main__":

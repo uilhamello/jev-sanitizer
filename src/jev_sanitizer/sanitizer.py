@@ -8,12 +8,21 @@ import math
 import re
 from dataclasses import dataclass, field
 
+_SECRET_WORDS = r"pass(?:word)?|senha|pwd|token|secret|segredo|api[_-]?key|apikey|auth(?:orization)?|cookie|session(?:_?id)?|sid"
+
 # Order matters: specific patterns before generic ones (e.g. JWT before long hex).
 DEFAULT_MASKS: list[tuple[str, str, str]] = [
     ("private_key", r"(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", "<PRIVATE_KEY>"),
     ("jwt", r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b", "<JWT>"),
     ("bearer", r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]{8,}", "Bearer <TOKEN>"),
-    ("secret_kv", r"(?i)\b(pass(word)?|senha|pwd|token|secret|segredo|api[_-]?key|apikey|auth(orization)?|cookie|session(_?id)?|sid)\b(\s*[=:]\s*|\s+)(\"[^\"]*\"|'[^']*'|[^\s,;&]+)", r"\1=<SECRET>"),
+    # URL userinfo (scheme://user:pass@host) before anything else sees the "@".
+    ("url_userinfo", r"(?i)\b([a-z][a-z0-9+.-]*://)[^\s/?#@]+@", r"\1<USERINFO>@"),
+    # key=value, key: value, and quoted keys as in JSON ("password": "x").
+    ("secret_kv", r"(?i)\b(?P<k>" + _SECRET_WORDS + r")\b(?P<sep>[\"']?\s*[=:]\s*)(?:\"[^\"]*\"|'[^']*'|[^\s,;&}]+)",
+     r"\g<k>\g<sep><SECRET>"),
+    # Free text ("a senha é hunter2"): skip up to 3 short words, mask the first token with a digit.
+    ("secret_word", r"(?i)\b(?P<k>" + _SECRET_WORDS + r")\b(?P<f>(?:\s+[^\W\d_]{1,7}){0,3}?)\s+(?=[^\s,;&]*\d)[^\s,;&]{4,}",
+     r"\g<k>\g<f> <SECRET>"),
     ("url_query", r"(https?://[^\s?#]+)\?[^\s#]*", r"\1?<QUERY>"),
     ("email", r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", "<EMAIL>"),
     ("cnpj", r"\b\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}\b", "<CNPJ>"),
@@ -34,7 +43,7 @@ DEFAULT_BLOCKS: list[tuple[str, str]] = [
     ("aws_key", r"\b(AKIA|ASIA)[A-Z0-9]{16}\b"),
     ("gcp_key", r"(?i)\"?private_key(_id)?\"?\s*:"),
     ("pem_header", r"-----BEGIN [A-Z ]*(PRIVATE KEY|CERTIFICATE)-----"),
-    ("residual_at", r"\S@\S+\.\S"),
+    ("residual_at", r"[^\s>]@\S+\.\S"),  # ">@" is a mask placeholder (<USERINFO>@host)
     ("conn_string", r"(?i)\b(mysql|postgres(ql)?|mongodb(\+srv)?|redis|amqp|mssql|jdbc:[a-z]+)://"),
 ]
 

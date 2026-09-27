@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -38,6 +39,11 @@ class JevClient:
         report.merge(r, where)
         return clean
 
+    def _ident(self, value, where: str, report: Report) -> None:
+        """Identifiers (model, question names, option keys) are sent verbatim: block if they carry PII."""
+        if self.config.sanitize and self.sanitizer.sanitize(str(value))[0] != str(value):
+            report.blocked.append(f"{where}:pii_in_identifier")
+
     def _question(self, name, q, report: Report) -> dict:
         if not NAME.match(str(name)):
             raise ValueError(f"question {name!r}: use snake_case")
@@ -45,6 +51,7 @@ class JevClient:
             raise ValueError(f"question {name}: type must be noul, choice or score")
         if not isinstance(q.get("instructions"), str) or not q["instructions"].strip():
             raise ValueError(f"question {name}: instructions required")
+        self._ident(name, f"name:{name}", report)
         kind, crit = q["type"], q.get("criteria")
         out = {"type": kind, "instructions": self._clean(q["instructions"], name, report)}
         if kind == "noul":
@@ -54,6 +61,8 @@ class JevClient:
         elif kind == "choice":
             if not isinstance(crit, dict) or not 2 <= len(crit) <= 20 or not all(NAME.match(str(k)) for k in crit):
                 raise ValueError(f"question {name}: choice needs 2-20 snake_case options")
+            for k in crit:
+                self._ident(k, f"{name}.option", report)
             out["criteria"] = {k: self._clean(v, name, report) for k, v in crit.items()}
         else:
             if not isinstance(crit, list) or not 2 <= len(crit) <= 10:
@@ -71,6 +80,7 @@ class JevClient:
         if not MODEL.match(model):
             raise ValueError("model: invalid name")
         report = Report()
+        self._ident(model, "model", report)
         body = {"model": model, "state": self._clean(state, "state", report),
                 "questions": {n: self._question(n, q, report) for n, q in questions.items()}}
         return body, report
@@ -119,12 +129,15 @@ class JevClient:
         """Local log WITHOUT content: origin, hash, size, masks, outcome."""
         if not self.config.log_path:
             return
-        path = Path(self.config.log_path).expanduser()
-        path.parent.mkdir(parents=True, exist_ok=True)
         event["ts"] = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
-        fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
-        with os.fdopen(fd, "a") as f:
-            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+        try:  # best effort: a broken log must never discard an answer or break the request
+            path = Path(self.config.log_path).expanduser()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+            with os.fdopen(fd, "a") as f:
+                f.write(json.dumps(event, ensure_ascii=False) + "\n")
+        except OSError as e:
+            print(f"jev-sanitizer: log disabled ({type(e).__name__})", file=sys.stderr)
 
 
 def _reason(e: Exception) -> str:

@@ -1,7 +1,8 @@
 """Configuration: defaults < config file < environment variables.
 
 Config file (TOML), first found:
-  $JEV_SANITIZER_CONFIG, ./jev-sanitizer.toml, ~/.config/jev-sanitizer/config.toml
+  $JEV_SANITIZER_CONFIG, ~/.config/jev-sanitizer/config.toml
+The current directory is never read: a cloned repo must not be able to turn sanitization off.
 """
 from __future__ import annotations
 
@@ -67,7 +68,7 @@ def _read_key_file(path: Path, env: str) -> str:
 
 
 def _config_file() -> Path | None:
-    for p in (os.environ.get("JEV_SANITIZER_CONFIG"), "jev-sanitizer.toml", "~/.config/jev-sanitizer/config.toml"):
+    for p in (os.environ.get("JEV_SANITIZER_CONFIG"), "~/.config/jev-sanitizer/config.toml"):
         if p and Path(p).expanduser().is_file():
             return Path(p).expanduser()
     return None
@@ -93,6 +94,8 @@ def load_config(**overrides) -> Config:
         data["sanitize"] = data["sanitize"].strip().lower() not in ("0", "false", "no", "off")
     if "timeout" in data:
         data["timeout"] = float(data["timeout"])
+    if "max_chars" in data:
+        data["max_chars"] = int(data["max_chars"])
     if data.get("log_path") in ("", "off", "none"):
         data["log_path"] = None
     cfg = Config(**data)
