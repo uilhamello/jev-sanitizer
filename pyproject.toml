@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jev-sanitizer"
+dynamic = ["version"]
+description = "Unofficial Jev (TypeSafe) client — CLI, MCP server and library — that sanitizes PII and secrets before every request."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = []
+keywords = ["jev", "typesafe", "mcp", "pii", "sanitizer", "llm"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Intended Audience :: Developers",
+]
+
+[project.scripts]
+jev-sanitizer = "jev_sanitizer.cli:main"
+jev-sanitizer-mcp = "jev_sanitizer.mcp_server:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "jev_sanitizer.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]

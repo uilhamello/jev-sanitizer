@@ -1,0 +1,21 @@
+{
+  "origin": "example:triage",
+  "state": "Cliente fulano@example.com: o boleto não chegou e vence hoje! Já é a terceira vez.",
+  "questions": {
+    "urgent": {
+      "type": "noul",
+      "instructions": "O chamado é urgente?",
+      "criteria": {"true": "Sensível a prazo", "false": "Sem urgência"}
+    },
+    "team": {
+      "type": "choice",
+      "instructions": "Qual time deve atender?",
+      "criteria": {"billing": "Boleto, pagamento, reembolso", "tech": "Erro, lentidão, integração", "sales": "Plano, contrato"}
+    },
+    "frustration": {
+      "type": "score",
+      "instructions": "Quão irritado está o cliente?",
+      "criteria": ["Calmo", "Irritado", "Muito irritado"]
+    }
+  }
+}
