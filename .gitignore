@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+jev-sanitizer.toml
+*.jsonl
+__pycache__/
+*.egg-info/
+build/
+dist/
+.venv/

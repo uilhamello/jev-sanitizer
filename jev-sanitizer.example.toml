@@ -1,0 +1,14 @@
+# Copie para ~/.config/jev-sanitizer/config.toml (ou ./jev-sanitizer.toml).
+# Variáveis de ambiente JEV_SANITIZER_* sobrescrevem este arquivo.
+
+provider = "typesafe"          # "typesafe" (api.typesafe.ai) ou "vercel" (AI Gateway)
+# model = "jev-latest"         # padrão do provider
+key_file = "~/.jev_env"        # arquivo com TYPESAFE_API_KEY=... (chmod 600); ou use a variável de ambiente
+timeout = 15
+sanitize = true                # padrão. false envia SEM máscara e avisa no stderr
+max_chars = 20000
+# log_path = "off"             # log local sem conteúdo; "off" desliga
+
+# Padrões extras (somam aos padrões internos, não os substituem)
+# extra_masks  = [["ticket", "\\bTCK-\\d+\\b", "<TICKET>"]]
+# extra_blocks = [["confidencial", "(?i)confidencial"]]
