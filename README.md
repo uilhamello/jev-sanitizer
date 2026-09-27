@@ -10,7 +10,7 @@ Zero dependências.
 ## Instalação
 
 ```bash
-pip install git+https://github.com/<usuario>/jev-sanitizer.git
+pip install git+https://github.com/uilhamello/jev-sanitizer.git
 ```
 
 Requer Python 3.11+.
