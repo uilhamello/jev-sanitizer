@@ -69,6 +69,8 @@ class Server:
                 out, is_error = self.call(p["name"], p.get("arguments") or {}), False
             except (ValueError, RuntimeError) as e:
                 out, is_error = {"error": str(e)}, True
+            except Exception as e:  # never leave a request without its answer
+                out, is_error = {"error": type(e).__name__}, True
             res = {"content": [{"type": "text", "text": json.dumps(out, ensure_ascii=False, indent=1)}], "isError": is_error}
         elif method == "ping":
             res = {}
@@ -85,9 +87,15 @@ def main() -> None:
         if not line.strip():
             continue
         try:
-            resp = server.handle(json.loads(line))
-        except Exception as e:
+            msg = json.loads(line)
+        except ValueError as e:
             resp = {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": type(e).__name__}}
+        else:
+            try:
+                resp = server.handle(msg)
+            except Exception as e:  # keep the id so the caller is not left waiting
+                mid = msg.get("id") if isinstance(msg, dict) else None
+                resp = {"jsonrpc": "2.0", "id": mid, "error": {"code": -32603, "message": type(e).__name__}}
         if resp is not None:
             sys.stdout.write(json.dumps(resp, ensure_ascii=False) + "\n")
             sys.stdout.flush()

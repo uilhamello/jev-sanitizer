@@ -10,7 +10,8 @@ import sys
 
 from . import __version__
 from .client import JevClient
-from .sanitizer import sanitize
+from .config import load_config
+from .sanitizer import Sanitizer
 
 EXIT = {"ok": 0, "blocked": 2, "unavailable": 3}
 
@@ -30,7 +31,8 @@ def main(argv=None) -> int:
 
     try:
         if args.cmd == "sanitize":
-            clean, report = sanitize(sys.stdin.read())
+            cfg = load_config(provider=args.provider, model=args.model)  # same rules ask would apply
+            clean, report = Sanitizer(cfg.extra_masks, cfg.extra_blocks, cfg.max_chars).sanitize(sys.stdin.read())
             print(clean, end="")
             print(json.dumps({"masks": report.masks, "blocked": report.blocked}), file=sys.stderr)
             return 0 if report.ok else 2

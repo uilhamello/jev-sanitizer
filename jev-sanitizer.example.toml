@@ -1,4 +1,4 @@
-# Copie para ~/.config/jev-sanitizer/config.toml (ou ./jev-sanitizer.toml).
+# Copie para ~/.config/jev-sanitizer/config.toml (ou aponte JEV_SANITIZER_CONFIG para ele).
 # Variáveis de ambiente JEV_SANITIZER_* sobrescrevem este arquivo.
 
 provider = "typesafe"          # "typesafe" (api.typesafe.ai) ou "vercel" (AI Gateway)

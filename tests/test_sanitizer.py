@@ -20,6 +20,12 @@ class Masks(unittest.TestCase):
         ("id_empresa=48213 e user_id: 77", "id_empresa=<N>", "48213"),
         ("req 3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b", "<UUID>", "3f2b8c1e"),
         ("jwt eyJhbGciOiJIUzI1.eyJzdWIiOiIxMjM0.SflKxwRJSMeKKF2QT4", "<JWT>", "eyJhbGci"),
+        ('{"password": "hunter2", "api_key": "k1"}', '"password": <SECRET>', "hunter2"),
+        ("{'senha': 'Hunter2'}", "<SECRET>", "Hunter2"),
+        ("a senha é hunter2", "senha é <SECRET>", "hunter2"),
+        ("o token de acesso ficou Abc123xyz", "<SECRET>", "Abc123xyz"),
+        ("http://admin:s3cret@192.168.0.1/admin", "<USERINFO>@<IP>", "s3cret"),
+        ("https://admin:s3cret@db.internal/x", "<USERINFO>@db.internal", "s3cret"),
     ]
 
     def test_masks(self):
@@ -37,6 +43,7 @@ class Blocks(unittest.TestCase):
         ('{"private_key": "x"}', "gcp_key"),
         ("-----BEGIN CERTIFICATE-----", "pem_header"),
         ("dsn mysql://root@db/app", "conn_string"),
+        ("dsn mysql://root:pw@db/app", "conn_string"),
         ("loose aZ9kQ2xP7mL4vB8nR3tY6wE1", "high_entropy"),
         ("x" * 20001, "too_long>20000"),
         (None, "not_text"),
@@ -54,6 +61,11 @@ class KeepsMetrics(unittest.TestCase):
         clean, report = sanitize(text)
         self.assertEqual(clean, text)
         self.assertTrue(report.ok)
+
+    def test_secret_words_without_value_untouched(self):
+        for text in ("auth failed for user", "session timeout 30s", "cookie expirado", "token inválido"):
+            with self.subTest(text=text):
+                self.assertEqual(sanitize(text)[0], text)
 
     def test_error_messages_untouched(self):
         text = "SQLSTATE[HY000] [2002] Connection timed out; Waiting for table metadata lock"
