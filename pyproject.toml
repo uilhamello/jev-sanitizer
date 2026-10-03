@@ -9,12 +9,20 @@ description = "Unofficial Jev (TypeSafe) client — CLI, MCP server and library 
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-dependencies = []
+# Pinned to a tag. Archive URL instead of git+: installs without git.
+dependencies = [
+    "txt-sanitizer @ https://github.com/uilhamello/txt-sanitizer/archive/refs/tags/v0.1.0.zip",
+]
 keywords = ["jev", "typesafe", "mcp", "pii", "sanitizer", "llm"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Security",
     "Intended Audience :: Developers",
+]
+
+[project.optional-dependencies]
+ner = [
+    "txt-sanitizer[ner] @ https://github.com/uilhamello/txt-sanitizer/archive/refs/tags/v0.1.0.zip",
 ]
 
 [project.scripts]

@@ -29,6 +29,7 @@ class Config:
     key_file: str | None = None
     timeout: float = 15.0
     sanitize: bool = True
+    ner: bool = False                                 # person names via spaCy (extra "ner")
     max_chars: int = 20000
     log_path: str | None = str(Path("~/.local/state/jev-sanitizer/requests.jsonl").expanduser())
     extra_masks: list = field(default_factory=list)   # [[name, regex, replacement], ...]
@@ -81,7 +82,8 @@ def load_config(**overrides) -> Config:
         with open(path, "rb") as f:
             data = tomllib.load(f)
     env_map = {"JEV_SANITIZER_PROVIDER": "provider", "JEV_SANITIZER_MODEL": "model", "JEV_SANITIZER_KEY_FILE": "key_file",
-               "JEV_SANITIZER_TIMEOUT": "timeout", "JEV_SANITIZER_LOG": "log_path", "JEV_SANITIZER_SANITIZE": "sanitize"}
+               "JEV_SANITIZER_TIMEOUT": "timeout", "JEV_SANITIZER_LOG": "log_path", "JEV_SANITIZER_SANITIZE": "sanitize",
+               "JEV_SANITIZER_NER": "ner"}
     for env, key in env_map.items():
         if env in os.environ:
             data[key] = os.environ[env]
@@ -92,6 +94,8 @@ def load_config(**overrides) -> Config:
         raise ValueError(f"unknown config keys: {sorted(unknown)}")
     if isinstance(data.get("sanitize"), str):
         data["sanitize"] = data["sanitize"].strip().lower() not in ("0", "false", "no", "off")
+    if isinstance(data.get("ner"), str):
+        data["ner"] = data["ner"].strip().lower() in ("1", "true", "yes", "on")
     if "timeout" in data:
         data["timeout"] = float(data["timeout"])
     if "max_chars" in data:

@@ -216,6 +216,23 @@ class Mcp(unittest.TestCase):
         self.assertEqual(replies[1]["error"]["code"], -32603)
 
 
+class Compat(unittest.TestCase):
+    def test_old_imports_still_work(self):
+        from jev_sanitizer import Sanitizer, sanitize
+        from jev_sanitizer.sanitizer import Report
+        self.assertIn("<EMAIL>", sanitize("bob@example.com")[0])
+        self.assertTrue(Report().ok and Sanitizer())
+
+    def test_ner_without_model_blocks_ask(self):
+        c = client(ner=True)
+        if c.sanitizer._nlp is not None:
+            self.skipTest("spaCy model installed: fail-secure path not reachable")
+        with mock.patch.object(c, "_http") as http:
+            out = c.ask("texto qualquer", Q)
+        self.assertEqual(out["status"], "blocked")
+        http.assert_not_called()
+
+
 class Cli(unittest.TestCase):
     def test_sanitize_uses_config_rules(self):
         with tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False) as f:

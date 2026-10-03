@@ -10,6 +10,9 @@ são mascarados em cada requisição, e o envio é **bloqueado** quando sobra al
 mascarar com segurança. Uma biblioteca, três formas de uso: **CLI**, **servidor MCP** e
 **import Python**. Sem dependências além da biblioteca padrão.
 
+A sanitização vive num pacote próprio, [**txt-sanitizer**](https://github.com/uilhamello/txt-sanitizer), que serve
+sem o Jev para mascarar qualquer texto. O jev-sanitizer usa esse pacote.
+
 > Projeto independente, sem afiliação com a TypeSafe AI. "Jev" é marca da TypeSafe.
 
 - [Por que usar](#por-que-usar)
@@ -70,7 +73,7 @@ Instale e configure o jev-sanitizer (https://github.com/uilhamello/jev-sanitizer
 2. Confira que há Python 3.11+. Instale seguindo a seção "Instalação" do README (pipx ou,
    sem pipx, o venv com os links em ~/.local/bin). No fim, `jev-sanitizer --version` precisa
    funcionar.
-3. Rode os testes: cd ~/tools/jev-sanitizer && PYTHONPATH=src python3 -m unittest discover -s tests
+3. Rode os testes num venv: cd ~/tools/jev-sanitizer && pip install -e . && python3 -m unittest discover -s tests
 4. Chave da API: NUNCA me peça a chave no chat, nunca a leia e nunca a exiba. Se ~/.jev_env não
    existir, me passe o comando da seção "Configuração" para eu rodar no MEU terminal (ou abra um
    terminal interativo, se você puder) e espere eu avisar. Depois confira só a permissão (600).
@@ -108,6 +111,7 @@ arquivo de configuração e padrões.
 | `model` | `jev-latest` | `JEV_SANITIZER_MODEL` |
 | `key_file` | nenhum | `JEV_SANITIZER_KEY_FILE` |
 | `sanitize` | **`true`** | `JEV_SANITIZER_SANITIZE` |
+| `ner` | `false`. `true` mascara nomes de pessoas; exige o extra `[ner]` e **bloqueia tudo** se o modelo faltar | `JEV_SANITIZER_NER` |
 | `timeout` | `15` segundos | `JEV_SANITIZER_TIMEOUT` |
 | `max_chars` | `20000` | não há |
 | `log_path` | `~/.local/state/jev-sanitizer/requests.jsonl` (`off` desliga) | `JEV_SANITIZER_LOG` |
@@ -189,18 +193,21 @@ nas respostas das ferramentas.
 
 ## Sanitização
 
-Vale para o `state`, para as instruções e para os critérios das perguntas.
+Vale para o `state`, para as instruções e para os critérios das perguntas. As regras são as do
+[txt-sanitizer](https://github.com/uilhamello/txt-sanitizer).
 
 | Ação | Alvo |
 |---|---|
-| **Mascara** | e-mail, CPF, CNPJ, cartão de pagamento (13 a 19 dígitos, com espaço ou hífen, validado por Luhn), token com prefixo conhecido (Slack, GitHub, Anthropic/OpenAI, Stripe, Google API), telefone BR, placa BR, IPv4/IPv6, UUID, JWT, `Bearer`, credencial em URL (`user:senha@host`), `senha=`/`token=`/`api_key=` (também em JSON e em texto corrido), query string de URL, hex longo, número de 6+ dígitos, `*_id=` |
+| **Mascara** | nome de pessoa (só com `ner = true`), endereço (logradouro + número), e-mail, CPF, RG, CNPJ, CEP, cartão de pagamento (13 a 19 dígitos, com espaço ou hífen, validado por Luhn), token com prefixo conhecido (Slack, GitHub, Anthropic/OpenAI, Stripe, Google API), telefone BR, placa BR, IPv4/IPv6, UUID, JWT, `Bearer`, credencial em URL (`user:senha@host`), `senha=`/`token=`/`api_key=` (também em JSON e em texto corrido), query string de URL, hex longo, número de 6+ dígitos, `*_id=` |
 | **Bloqueia** (nada é enviado) | chave AWS, chave de service account GCP, PEM ou certificado, connection string (`mysql://`, `redis://`...), string de alta entropia, `@` residual, texto acima de `max_chars` (checado antes das regex), PII em identificadores (modelo, nome de pergunta, chave de opção) |
 
 Dá para acrescentar regras próprias com `extra_masks` e `extra_blocks`. As regras padrão não podem
 ser removidas.
 
 **Limites conhecidos:**
-- Não detecta **nomes de pessoas**, endereços, CEP nem RG.
+- Sem `ner = true`, **não detecta nomes de pessoas**. Com ele, nome em minúsculas ou fora de frase
+  pode escapar: o modelo depende de contexto.
+- Endereço só é mascarado com logradouro **e** número ("Rua X, 150"). Cidade e bairro soltos passam.
 - Número de 6+ dígitos sem separador vira `<N>`. Escreva métricas como `51.000.000` ou `51M`.
 - Regex não substitui uma política de dados. Mande só o necessário, já resumido.
 
@@ -226,8 +233,11 @@ Encontrou uma forma de vazar dados pelo sanitizador? Abra uma
 
 ```bash
 git clone https://github.com/uilhamello/jev-sanitizer.git && cd jev-sanitizer
-PYTHONPATH=src python3 -m unittest discover -s tests -v
+pip install -e . && python3 -m unittest discover -s tests -v
 ```
+
+O `pip install -e .` traz o [txt-sanitizer](https://github.com/uilhamello/txt-sanitizer) da tag
+fixada. Os testes das máscaras vivem lá.
 
 O CI roda os testes em Python 3.11, 3.12 e 3.13 a cada push. A prova ponta a ponta, com chamada
 real e canários capturados no fio, está em [examples/prova](examples/prova/README.md).
