@@ -10,11 +10,34 @@ from dataclasses import dataclass, field
 
 _SECRET_WORDS = r"pass(?:word)?|senha|pwd|token|secret|segredo|api[_-]?key|apikey|auth(?:orization)?|cookie|session(?:_?id)?|sid"
 
+# Tokens with a well-known prefix: masked even when they would not trip the entropy check.
+_KNOWN_TOKENS = (r"xox[abposr]-[A-Za-z0-9-]{10,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}"
+                 r"|sk-(?:ant-)?[A-Za-z0-9_-]{20,}|[sr]k_(?:live|test)_[A-Za-z0-9]{16,}|AIza[0-9A-Za-z_-]{35}")
+
+
+def _luhn(digits: str) -> bool:
+    total = 0
+    for i, d in enumerate(reversed(digits)):
+        n = int(d) * (2 if i % 2 else 1)
+        total += n - 9 if n > 9 else n
+    return total % 10 == 0
+
+
+def _card(m: re.Match) -> str:
+    """Payment card (13-19 digits, spaces or dashes allowed): masked only when the Luhn check passes."""
+    digits = re.sub(r"\D", "", m.group(0))
+    return "<CARD>" if 13 <= len(digits) <= 19 and _luhn(digits) else m.group(0)
+
+
 # Order matters: specific patterns before generic ones (e.g. JWT before long hex).
-DEFAULT_MASKS: list[tuple[str, str, str]] = [
+# The replacement may be a callable (see _card), as accepted by re.sub.
+DEFAULT_MASKS: list[tuple] = [
     ("private_key", r"(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", "<PRIVATE_KEY>"),
     ("jwt", r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b", "<JWT>"),
     ("bearer", r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]{8,}", "Bearer <TOKEN>"),
+    ("known_token", r"\b(?:" + _KNOWN_TOKENS + r")", "<TOKEN>"),
+    # Before cpf/cnpj/phone/long_number, which would otherwise take pieces of the number.
+    ("card", r"(?<![\d.])\d(?:[ -]?\d){12,18}(?![\d.])", _card),
     # URL userinfo (scheme://user:pass@host) before anything else sees the "@".
     ("url_userinfo", r"(?i)\b([a-z][a-z0-9+.-]*://)[^\s/?#@]+@", r"\1<USERINFO>@"),
     # key=value, key: value, and quoted keys as in JSON ("password": "x").
@@ -27,8 +50,8 @@ DEFAULT_MASKS: list[tuple[str, str, str]] = [
     ("email", r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", "<EMAIL>"),
     ("cnpj", r"\b\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}\b", "<CNPJ>"),
     ("cpf", r"\b\d{3}\.\d{3}\.\d{3}-\d{2}\b", "<CPF>"),
-    ("phone_br", r"(?<!\d)(\+?55\s?)?\(?\d{2}\)?\s?9?\d{4}-\d{4}(?!\d)", "<PHONE>"),
-    ("plate_br", r"\b[A-Z]{3}-?\d[A-Z0-9]\d{2}\b", "<PLATE>"),
+    ("phone_br", r"(?<!\d)(\+?55\s?)?\(?\d{2}\)?\s?9?\d{4}[-\s]\d{4}(?!\d)", "<PHONE>"),
+    ("plate_br", r"(?i)\b[A-Z]{3}-?\d[A-Z0-9]\d{2}\b", "<PLATE>"),
     ("uuid", r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b", "<UUID>"),
     ("ipv4", r"\b(?:\d{1,3}\.){3}\d{1,3}\b", "<IP>"),
     ("ipv6", r"\b(?:[0-9a-fA-F]{1,4}:){4,7}[0-9a-fA-F]{1,4}\b", "<IP>"),
@@ -90,6 +113,10 @@ class Sanitizer:
         report = Report()
         if not isinstance(text, str):
             report.blocked.append("not_text")
+            return "", report
+        # Size first: the regexes are not linear on adversarial input, so oversized text never reaches them.
+        if len(text) > self.max_chars:
+            report.blocked.append(f"too_long>{self.max_chars}")
             return "", report
         clean = text
         for name, rx, repl in self.masks:

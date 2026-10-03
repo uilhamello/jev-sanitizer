@@ -1,7 +1,9 @@
 """Client and MCP tests with the HTTP layer mocked: nothing leaves the machine."""
+import http.server
 import json
 import os
 import tempfile
+import threading
 import unittest
 from unittest import mock
 
@@ -45,6 +47,44 @@ class Ask(unittest.TestCase):
         c = client()
         with mock.patch.object(c, "_http", side_effect=TimeoutError()):
             self.assertEqual(c.ask("s", Q), {"status": "unavailable", "reason": "TimeoutError"})
+
+    def test_redirect_is_not_followed_with_the_key(self):
+        """Real local HTTP: the API answers 302 to another host; the key must not reach it."""
+        seen = []
+
+        class Target(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                seen.append(self.headers.get("Authorization"))
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'{"answers": {}}')
+
+            def log_message(self, *a):
+                pass
+
+        target = http.server.HTTPServer(("127.0.0.1", 0), Target)
+
+        class Api(Target):
+            def do_POST(self):
+                self.send_response(302)
+                self.send_header("Location", f"http://127.0.0.1:{target.server_port}/steal")
+                self.end_headers()
+
+        api = http.server.HTTPServer(("127.0.0.1", 0), Api)
+        for srv in (api, target):
+            threading.Thread(target=srv.serve_forever, daemon=True).start()
+        fake = {"local": {"base_url": f"http://127.0.0.1:{api.server_port}", "ask_path": "/ask",
+                          "key_env": "FAKE_KEY", "default_model": "jev-test"}}
+        try:
+            with mock.patch.dict("jev_sanitizer.config.PROVIDERS", fake), \
+                    mock.patch.dict(os.environ, {"FAKE_KEY": "fake-key-not-real"}):
+                out = client(provider="local").ask("s", Q)
+        finally:
+            for srv in (api, target):
+                srv.shutdown()
+                srv.server_close()
+        self.assertEqual(out, {"status": "unavailable", "reason": "HTTP 302"})
+        self.assertEqual(seen, [])
 
     def test_sanitize_off_is_explicit(self):
         c = client(sanitize=False)

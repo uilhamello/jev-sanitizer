@@ -1,4 +1,5 @@
 """All data here is fictitious."""
+import time
 import unittest
 
 from jev_sanitizer import Sanitizer, sanitize
@@ -26,7 +27,20 @@ class Masks(unittest.TestCase):
         ("o token de acesso ficou Abc123xyz", "<SECRET>", "Abc123xyz"),
         ("http://admin:s3cret@192.168.0.1/admin", "<USERINFO>@<IP>", "s3cret"),
         ("https://admin:s3cret@db.internal/x", "<USERINFO>@db.internal", "s3cret"),
+        ("cartão 4111 1111 1111 1111 recusado", "<CARD>", "1111"),
+        ("cartão 4111-1111-1111-1111", "<CARD>", "4111"),
+        ("amex 3782 822463 10005", "<CARD>", "822463"),
+        ("fone (11) 98765 4321", "<PHONE>", "98765"),
+        ("placa abc1d23 apreendida", "<PLATE>", "abc1d23"),
+        # Fake tokens built at runtime so secret scanners (e.g. GitHub push protection) do not flag the source.
+        ("slack " + "xox" + "b-123456789012-1234567890123-AbCdEfGhIjKlMnOpQrStUvWx", "<TOKEN>", "AbCdEf"),
+        ("use " + "gh" + "p_aB3dE5gH7jK9mN1pQ3sT5vW7yZ9bC1dE3fG5 no CI", "<TOKEN>", "p_aB3dE5"),
+        ("stripe " + "sk" + "_live_51HxYzAbCdEfGhIjKlMnOpQr", "<TOKEN>", "_live_"),
     ]
+
+    def test_digits_failing_luhn_are_not_a_card(self):
+        clean, _ = sanitize("pedido 1234 5678 9012 3456")
+        self.assertNotIn("<CARD>", clean)
 
     def test_masks(self):
         for text, expected, leaked in self.CASES:
@@ -53,6 +67,13 @@ class Blocks(unittest.TestCase):
         for text, reason in self.CASES:
             with self.subTest(reason=reason):
                 self.assertIn(reason, sanitize(text)[1].blocked)
+
+    def test_oversized_input_is_blocked_before_the_regexes(self):
+        start = time.monotonic()
+        clean, report = sanitize("x@" * 100000)  # took ~20 s when the size check ran last
+        self.assertLess(time.monotonic() - start, 1)
+        self.assertEqual(clean, "")
+        self.assertIn("too_long>20000", report.blocked)
 
 
 class KeepsMetrics(unittest.TestCase):

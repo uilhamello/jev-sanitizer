@@ -193,14 +193,14 @@ Vale para o `state`, para as instruções e para os critérios das perguntas.
 
 | Ação | Alvo |
 |---|---|
-| **Mascara** | e-mail, CPF, CNPJ, telefone BR, placa BR, IPv4/IPv6, UUID, JWT, `Bearer`, credencial em URL (`user:senha@host`), `senha=`/`token=`/`api_key=` (também em JSON e em texto corrido), query string de URL, hex longo, número de 6+ dígitos, `*_id=` |
-| **Bloqueia** (nada é enviado) | chave AWS, chave de service account GCP, PEM ou certificado, connection string (`mysql://`, `redis://`...), string de alta entropia, `@` residual, texto acima de `max_chars`, PII em identificadores (modelo, nome de pergunta, chave de opção) |
+| **Mascara** | e-mail, CPF, CNPJ, cartão de pagamento (13 a 19 dígitos, com espaço ou hífen, validado por Luhn), token com prefixo conhecido (Slack, GitHub, Anthropic/OpenAI, Stripe, Google API), telefone BR, placa BR, IPv4/IPv6, UUID, JWT, `Bearer`, credencial em URL (`user:senha@host`), `senha=`/`token=`/`api_key=` (também em JSON e em texto corrido), query string de URL, hex longo, número de 6+ dígitos, `*_id=` |
+| **Bloqueia** (nada é enviado) | chave AWS, chave de service account GCP, PEM ou certificado, connection string (`mysql://`, `redis://`...), string de alta entropia, `@` residual, texto acima de `max_chars` (checado antes das regex), PII em identificadores (modelo, nome de pergunta, chave de opção) |
 
 Dá para acrescentar regras próprias com `extra_masks` e `extra_blocks`. As regras padrão não podem
 ser removidas.
 
 **Limites conhecidos:**
-- Não detecta **nomes de pessoas** nem endereços.
+- Não detecta **nomes de pessoas**, endereços, CEP nem RG.
 - Número de 6+ dígitos sem separador vira `<N>`. Escreva métricas como `51.000.000` ou `51M`.
 - Regex não substitui uma política de dados. Mande só o necessário, já resumido.
 
@@ -209,7 +209,8 @@ ser removidas.
 ## Segurança
 
 - **Hosts fixos por provider.** Não existe URL configurável, então dados e chave não vão para um
-  host desconhecido.
+  host desconhecido. Redirecionamento HTTP não é seguido: um `3xx` vira `unavailable`, e a chave
+  nunca é reenviada para outro destino.
 - **A chave** vem do ambiente ou de um arquivo com permissão 600, que é recusado se estiver mais
   aberto. Ela nunca é logada nem devolvida.
 - **O log local** guarda origem, hash, tamanho, máscaras e resultado, nunca o conteúdo. O arquivo é

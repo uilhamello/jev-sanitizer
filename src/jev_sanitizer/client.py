@@ -26,6 +26,16 @@ MODEL = re.compile(r"^[a-z0-9][a-z0-9./-]{1,60}$")
 MAX_QUESTIONS = 20
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """urllib re-sends Authorization to wherever a redirect points (any host, even plain http)."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None  # the 3xx surfaces as HTTPError -> status "unavailable"
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
 class JevClient:
     def __init__(self, config: Config | None = None, **overrides):
         self.config = config or load_config(**overrides)
@@ -122,7 +132,7 @@ class JevClient:
         req = urllib.request.Request(self.config.endpoint["base_url"] + path, data=body, method=method,
                                      headers={"Authorization": "Bearer " + self.config.api_key(),
                                               "Content-Type": "application/json", "User-Agent": "jev-sanitizer"})
-        with urllib.request.urlopen(req, timeout=self.config.timeout) as r:
+        with _OPENER.open(req, timeout=self.config.timeout) as r:
             return json.load(r)
 
     def _log(self, event: dict) -> None:
