@@ -1,5 +1,6 @@
 """Client and MCP tests with the HTTP layer mocked: nothing leaves the machine."""
 import http.server
+import importlib.util
 import json
 import os
 import tempfile
@@ -224,13 +225,31 @@ class Compat(unittest.TestCase):
         self.assertTrue(Report().ok and Sanitizer())
 
     def test_ner_without_model_blocks_ask(self):
+        if importlib.util.find_spec("pt_core_news_sm") is not None:
+            self.skipTest("model installed: fail-secure path not reachable")
         c = client(ner=True)
-        if c.sanitizer._nlp is not None:
-            self.skipTest("spaCy model installed: fail-secure path not reachable")
         with mock.patch.object(c, "_http") as http:
             out = c.ask("texto qualquer", Q)
         self.assertEqual(out["status"], "blocked")
         http.assert_not_called()
+
+
+class Regions(unittest.TestCase):
+    def test_br_is_the_default_region(self):
+        body = client().dry_run("CPF 123.456.789-09 e CEP 01310-100", Q)
+        self.assertEqual(body["would_send"]["state"], "CPF <CPF> e CEP <CEP>")
+
+    def test_missing_region_blocks_ask(self):
+        c = client(sanitizers=["br", "eu"])
+        with mock.patch.object(c, "_http") as http:
+            out = c.ask("texto qualquer", Q)
+        self.assertEqual(out["status"], "blocked")
+        self.assertIn("state:region_missing:eu", out["reasons"])
+        http.assert_not_called()
+
+    def test_regions_from_env(self):
+        with mock.patch.dict(os.environ, {"JEV_SANITIZER_SANITIZERS": "br, eu"}, clear=True):
+            self.assertEqual(load_config(log_path=None).sanitizers, ["br", "eu"])
 
 
 class Cli(unittest.TestCase):

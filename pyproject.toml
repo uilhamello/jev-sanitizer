@@ -9,9 +9,11 @@ description = "Unofficial Jev (TypeSafe) client — CLI, MCP server and library 
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-# Pinned to a tag. Archive URL instead of git+: installs without git.
+# Pinned to tags. Archive URL instead of git+: installs without git.
+# The core loads the regions; "br" is the default region (config: sanitizers).
 dependencies = [
-    "text-sanitizer-br @ https://github.com/uilhamello/text-sanitizer-br/archive/refs/tags/v0.1.0.zip",
+    "text-sanitizer-core @ https://github.com/uilhamello/text-sanitizer-core/archive/refs/tags/v0.1.0.zip",
+    "text-sanitizer-br @ https://github.com/uilhamello/text-sanitizer-br/archive/refs/tags/v0.2.0.zip",
 ]
 keywords = ["jev", "typesafe", "mcp", "pii", "sanitizer", "llm"]
 classifiers = [
@@ -22,7 +24,7 @@ classifiers = [
 
 [project.optional-dependencies]
 ner = [
-    "text-sanitizer-br[ner] @ https://github.com/uilhamello/text-sanitizer-br/archive/refs/tags/v0.1.0.zip",
+    "text-sanitizer-br[ner] @ https://github.com/uilhamello/text-sanitizer-br/archive/refs/tags/v0.2.0.zip",
 ]
 
 [project.scripts]

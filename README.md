@@ -10,8 +10,10 @@ são mascarados em cada requisição, e o envio é **bloqueado** quando sobra al
 mascarar com segurança. Uma biblioteca, três formas de uso: **CLI**, **servidor MCP** e
 **import Python**. Sem dependências além da biblioteca padrão.
 
-A sanitização vive num pacote próprio, [**text-sanitizer-br**](https://github.com/uilhamello/text-sanitizer-br), que serve
-sem o Jev para mascarar qualquer texto. O jev-sanitizer usa esse pacote.
+A sanitização vive em pacotes próprios, que servem sem o Jev para mascarar qualquer texto:
+[**text-sanitizer-core**](https://github.com/uilhamello/text-sanitizer-core) (motor e regras
+universais) e as regiões, como o [**text-sanitizer-br**](https://github.com/uilhamello/text-sanitizer-br)
+(padrão). Para outra região, instale o pacote dela e acrescente o nome em `sanitizers`.
 
 > Projeto independente, sem afiliação com a TypeSafe AI. "Jev" é marca da TypeSafe.
 
@@ -111,6 +113,7 @@ arquivo de configuração e padrões.
 | `model` | `jev-latest` | `JEV_SANITIZER_MODEL` |
 | `key_file` | nenhum | `JEV_SANITIZER_KEY_FILE` |
 | `sanitize` | **`true`** | `JEV_SANITIZER_SANITIZE` |
+| `sanitizers` | `["br"]`. Regiões aplicadas pelo [core](https://github.com/uilhamello/text-sanitizer-core), numa passada; região não instalada **bloqueia tudo** | `JEV_SANITIZER_SANITIZERS` (`br,eu`) |
 | `ner` | `false`. `true` mascara nomes de pessoas; exige o extra `[ner]` e **bloqueia tudo** se o modelo faltar | `JEV_SANITIZER_NER` |
 | `timeout` | `15` segundos | `JEV_SANITIZER_TIMEOUT` |
 | `max_chars` | `20000` | não há |

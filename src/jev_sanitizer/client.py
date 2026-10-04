@@ -19,7 +19,7 @@ import urllib.request
 from pathlib import Path
 
 from .config import Config, load_config
-from text_sanitizer_br import Report, Sanitizer
+from text_sanitizer_core import Report
 
 NAME = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
 MODEL = re.compile(r"^[a-z0-9][a-z0-9./-]{1,60}$")
@@ -39,7 +39,7 @@ _OPENER = urllib.request.build_opener(_NoRedirect)
 class JevClient:
     def __init__(self, config: Config | None = None, **overrides):
         self.config = config or load_config(**overrides)
-        self.sanitizer = Sanitizer(self.config.extra_masks, self.config.extra_blocks, self.config.max_chars, ner=self.config.ner)
+        self.sanitizer = self.config.build_sanitizer()
 
     # ---- validation + sanitization -------------------------------------------------------------
     def _clean(self, text, where: str, report: Report) -> str:
