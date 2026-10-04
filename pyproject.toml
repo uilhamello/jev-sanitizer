@@ -11,7 +11,7 @@ requires-python = ">=3.11"
 license = "MIT"
 # Pinned to a tag. Archive URL instead of git+: installs without git.
 dependencies = [
-    "txt-sanitizer @ https://github.com/uilhamello/txt-sanitizer/archive/refs/tags/v0.1.0.zip",
+    "text-sanitizer-br @ https://github.com/uilhamello/text-sanitizer-br/archive/refs/tags/v0.1.0.zip",
 ]
 keywords = ["jev", "typesafe", "mcp", "pii", "sanitizer", "llm"]
 classifiers = [
@@ -22,7 +22,7 @@ classifiers = [
 
 [project.optional-dependencies]
 ner = [
-    "txt-sanitizer[ner] @ https://github.com/uilhamello/txt-sanitizer/archive/refs/tags/v0.1.0.zip",
+    "text-sanitizer-br[ner] @ https://github.com/uilhamello/text-sanitizer-br/archive/refs/tags/v0.1.0.zip",
 ]
 
 [project.scripts]

@@ -19,7 +19,7 @@ import urllib.request
 from pathlib import Path
 
 from .config import Config, load_config
-from txt_sanitizer import Report, Sanitizer
+from text_sanitizer_br import Report, Sanitizer
 
 NAME = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
 MODEL = re.compile(r"^[a-z0-9][a-z0-9./-]{1,60}$")

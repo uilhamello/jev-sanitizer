@@ -10,7 +10,7 @@ são mascarados em cada requisição, e o envio é **bloqueado** quando sobra al
 mascarar com segurança. Uma biblioteca, três formas de uso: **CLI**, **servidor MCP** e
 **import Python**. Sem dependências além da biblioteca padrão.
 
-A sanitização vive num pacote próprio, [**txt-sanitizer**](https://github.com/uilhamello/txt-sanitizer), que serve
+A sanitização vive num pacote próprio, [**text-sanitizer-br**](https://github.com/uilhamello/text-sanitizer-br), que serve
 sem o Jev para mascarar qualquer texto. O jev-sanitizer usa esse pacote.
 
 > Projeto independente, sem afiliação com a TypeSafe AI. "Jev" é marca da TypeSafe.
@@ -194,7 +194,7 @@ nas respostas das ferramentas.
 ## Sanitização
 
 Vale para o `state`, para as instruções e para os critérios das perguntas. As regras são as do
-[txt-sanitizer](https://github.com/uilhamello/txt-sanitizer).
+[text-sanitizer-br](https://github.com/uilhamello/text-sanitizer-br).
 
 | Ação | Alvo |
 |---|---|
@@ -236,7 +236,7 @@ git clone https://github.com/uilhamello/jev-sanitizer.git && cd jev-sanitizer
 pip install -e . && python3 -m unittest discover -s tests -v
 ```
 
-O `pip install -e .` traz o [txt-sanitizer](https://github.com/uilhamello/txt-sanitizer) da tag
+O `pip install -e .` traz o [text-sanitizer-br](https://github.com/uilhamello/text-sanitizer-br) da tag
 fixada. Os testes das máscaras vivem lá.
 
 O CI roda os testes em Python 3.11, 3.12 e 3.13 a cada push. A prova ponta a ponta, com chamada

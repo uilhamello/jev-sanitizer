@@ -11,7 +11,7 @@ import sys
 from . import __version__
 from .client import JevClient
 from .config import load_config
-from txt_sanitizer import Sanitizer
+from text_sanitizer_br import Sanitizer
 
 EXIT = {"ok": 0, "blocked": 2, "unavailable": 3}
 
