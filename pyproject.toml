@@ -12,8 +12,8 @@ license = "MIT"
 # Pinned to tags. Archive URL instead of git+: installs without git.
 # The core loads the regions; "br" is the default region (config: sanitizers).
 dependencies = [
-    "text-sanitizer-core @ https://github.com/uilhamello/text-sanitizer-core/archive/refs/tags/v0.2.0.zip",
-    "text-sanitizer-br @ https://github.com/uilhamello/text-sanitizer-br/archive/refs/tags/v0.3.0.zip",
+    "text-sanitizer-core @ https://github.com/uilhamello/text-sanitizer-core/archive/refs/tags/v0.2.1.zip",
+    "text-sanitizer-br @ https://github.com/uilhamello/text-sanitizer-br/archive/refs/tags/v0.3.1.zip",
 ]
 keywords = ["jev", "typesafe", "mcp", "pii", "sanitizer", "llm"]
 classifiers = [
@@ -24,7 +24,7 @@ classifiers = [
 
 [project.optional-dependencies]
 ner = [
-    "text-sanitizer-br[ner] @ https://github.com/uilhamello/text-sanitizer-br/archive/refs/tags/v0.3.0.zip",
+    "text-sanitizer-br[ner] @ https://github.com/uilhamello/text-sanitizer-br/archive/refs/tags/v0.3.1.zip",
 ]
 
 [project.scripts]
