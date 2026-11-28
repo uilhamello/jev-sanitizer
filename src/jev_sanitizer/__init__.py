@@ -1,5 +1,5 @@
 """jev-sanitizer — unofficial Jev (TypeSafe) client that sanitizes every request by default."""
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 
 from .client import JevClient  # noqa: E402
 from .config import Config, load_config  # noqa: E402
