@@ -2,13 +2,13 @@
 
 [![test](https://github.com/uilhamello/jev-sanitizer/actions/workflows/test.yml/badge.svg)](https://github.com/uilhamello/jev-sanitizer/actions/workflows/test.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
-![Dependências](https://img.shields.io/badge/depend%C3%AAncias-0-brightgreen)
 [![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-green)](LICENSE)
 
 **Cliente do [Jev](https://docs.typesafe.ai) que sanitiza tudo antes de enviar.** PII e segredos
 são mascarados em cada requisição, e o envio é **bloqueado** quando sobra algo que não dá para
 mascarar com segurança. Uma biblioteca, três formas de uso: **CLI**, **servidor MCP** e
-**import Python**. Sem dependências além da biblioteca padrão.
+**import Python**. Depende só dos dois pacotes de sanitização abaixo, do mesmo autor; o modelo
+de nomes (spaCy) é opcional.
 
 A sanitização vive em pacotes próprios, que servem sem o Jev para mascarar qualquer texto:
 [**text-sanitizer-core**](https://github.com/uilhamello/text-sanitizer-core) (motor e regras
@@ -197,11 +197,13 @@ nas respostas das ferramentas.
 ## Sanitização
 
 Vale para o `state`, para as instruções e para os critérios das perguntas. As regras são as do
-[text-sanitizer-br](https://github.com/uilhamello/text-sanitizer-br).
+[text-sanitizer-br](https://github.com/uilhamello/text-sanitizer-br), que publica o
+[benchmark de vazamento](https://github.com/uilhamello/text-sanitizer-br#benchmark-de-vazamento-28112026)
+(0 em 165 casos, 6 em 80 textos técnicos alterados).
 
 | Ação | Alvo |
 |---|---|
-| **Mascara** | nome de pessoa (só com `ner = true`), endereço (logradouro + número), e-mail, CPF, RG, CNPJ, CEP, cartão de pagamento (13 a 19 dígitos, com espaço ou hífen, validado por Luhn), token com prefixo conhecido (Slack, GitHub, Anthropic/OpenAI, Stripe, Google API), telefone BR, placa BR, IPv4/IPv6, UUID, JWT, `Bearer`, credencial em URL (`user:senha@host`), `senha=`/`token=`/`api_key=` (também em JSON e em texto corrido), query string de URL, hex longo, número de 6+ dígitos, `*_id=` |
+| **Mascara** | nome de pessoa (só com `ner = true`), endereço (logradouro + número), e-mail, CPF, RG, CNPJ, CEP, cartão de pagamento (13 a 19 dígitos, com espaço ou hífen, validado por Luhn), token com prefixo conhecido (Slack, GitHub, Anthropic/OpenAI, Stripe, Google API), telefone BR, placa BR, conta bancária (agência e conta com dígito), IPv4/IPv6, UUID, JWT, `Bearer`, credencial em URL (`user:senha@host`), `senha=`/`token=`/`api_key=` (também em JSON e em texto corrido), query string de URL, hex longo, número de 6+ dígitos, `*_id=` |
 | **Bloqueia** (nada é enviado) | chave AWS, chave de service account GCP, PEM ou certificado, connection string (`mysql://`, `redis://`...), string de alta entropia, `@` residual, texto acima de `max_chars` (checado antes das regex), PII em identificadores (modelo, nome de pergunta, chave de opção) |
 
 Dá para acrescentar regras próprias com `extra_masks` e `extra_blocks`. As regras padrão não podem
@@ -211,7 +213,9 @@ ser removidas.
 - Sem `ner = true`, **não detecta nomes de pessoas**. Com ele, nome em minúsculas ou fora de frase
   pode escapar: o modelo depende de contexto.
 - Endereço só é mascarado com logradouro **e** número ("Rua X, 150"). Cidade e bairro soltos passam.
-- Número de 6+ dígitos sem separador vira `<N>`. Escreva métricas como `51.000.000` ou `51M`.
+- Número de 6+ dígitos sem separador vira `<N>`, exceto depois de `epoch`, `build`, `Content-Length` e
+  similares, ou com até 10 dígitos antes de unidade (`ms`, `bytes`). Na dúvida, escreva `51.000.000` ou `51M`.
+- Hex longo vira `<HEX>`, exceto depois de `commit` ou `sha256`. Versão (`Chrome/120.0.0.0`) não vira IP.
 - Regex não substitui uma política de dados. Mande só o necessário, já resumido.
 
 `sanitize = false` desliga a máscara e emite um aviso no stderr. Use só com dados sintéticos.
